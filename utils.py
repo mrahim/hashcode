@@ -8,9 +8,11 @@ def time_turns(d):
 
 
 def order_weight(orders, product_weights):
-    cost = 0
+    costs = []
     for order in orders:
+        cost = []
         products_type = order[1]
         for p in products_type:
             cost += product_weights[p]
-    return cost
+        costs.append(cost)
+    return costs
