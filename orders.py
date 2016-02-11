@@ -3,8 +3,9 @@ from math import ceil
 from utils import distance
 import numpy as np
 
-MAX_WEIGHT = 100
-
+global MAX_WEIGHT
+global INSTRUCTION
+global WEIGHTS
 
 class Game:
     def __init__(self, orders, warehouses, drones):
@@ -31,6 +32,7 @@ class Game:
                 drone.affect(self.orders[np.argmin(self.cost_matrix[:, j])])
             else:
                 drone.wait -= 1
+        self.fill_matrix()
 
 class Order:
     def __init__(self, order_id, position,
@@ -111,7 +113,8 @@ class Drone:
             n_products -= (MAX_WEIGHTS - self.weight) // WEIGHTS[product_id] + 1
             self.weight += (old_n_products - n_products) * WEIGHTS[product_id]
             self.products += n_products
-            INSTRUCTIONS.append([self.id, 'L', warehouse.id, product_id, n_products)
+            INSTRUCTIONS.append([self.id, 'L', warehouse.id,
+                                 product_id, n_products)
             return 0
         else:
             return 1
@@ -131,8 +134,10 @@ class Drone:
 
 def main():
     global INSTRUCTION = []
-    global MAX_WEIGHTS =
+    global MAX_WEIGHTS = 100
     global WEIGHTS =
     orders = []
     for i in range(n_orders):
-        orders.append(Order())
+        orders.append(Order(i))
+    for i in range(n_warehouses):
+    for i i
