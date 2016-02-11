@@ -1,3 +1,4 @@
+import numpy as np
 from math import sqrt, ceil
 
 def distance(x, y):
@@ -6,13 +7,5 @@ def distance(x, y):
 def time_turns(d):
     return ceil(d)
 
-
 def order_weight(orders, product_weights):
-    costs = []
-    for order in orders:
-        cost = []
-        products_type = order[1]
-        for p in products_type:
-            cost += product_weights[p]
-        costs.append(cost)
-    return costs
+    return [np.dot(order[1], product_weights) for order in orders]
