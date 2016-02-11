@@ -1,3 +1,5 @@
+from math import ceil
+
 from utils import distance
 import numpy as np
 
@@ -22,11 +24,8 @@ class Game:
 
     def turn(self):
         for j, drone in enumerate(self.drones):
-            if drone.is_available():
-                drone.affect(self.orders[np.argmin(self.cost_matrix[:, j])],
-                             warehouses)
-            else:
-                drone.update()
+            if self.drone_availability[j] >= 0:
+                drone.affect(self.orders[np.argmin(self.cost_matrix[:, j])])
 
 
 class Order:
@@ -64,33 +63,33 @@ class Warehouse:
         self.products[product] -= n_product
 
 class Drone:
-    def __init__(self, position, products, game):
+    def __init__(self, drone_id, position, products, game):
         self.position = position
         self.products = products
-        self.state_ = 'wait'
+        self.wait = 0
 
-    def deliver(self, product_id, n_product):
-        self.state_ = 'deliver'
+    def delivers(self, product_id, n_product):
+        self.game.instruction.append
         self.products[product_id] -= n_product
+        self.wait += 1
 
     def evaluate(self, warehouses):
         return sum(map(warehouses, lambda t: distance(t.position, self.position)))
 
-    def affect(self, order, warehouses):
-        self.available_ = True
-        self.order_ = order
-        self.warehouses_ = warehouses
 
+    def flies(self, position):
+        self.game.instruction.append('')
+        self.wait += int(ceil(distance(position, self.position)))
+        self.position = position
 
+    def loads(self, product_id, n_product):
+        if self.weight + n_product < MAX_WEIGHT:
+            self.products[product_id] += n_product
+        self.wait += 1
 
-    def update(self):
-        if np.all(self.products - self.order_ >= 0) or self.total_weights > TOTAL_WEIGHTS:
-            self.flies(self.order_.position)
-            self.deliver(self.order)
-        else:
-            self.fli
-
-    def flies(self, warehouse):
-        self.pos
-
-    def load(self, warehouse):
+    def affect(self, order):
+        for warehouse in order.warehouses_:
+            self.flies(warehouse)
+            for product_id in np.where(order.products)[0]:
+                self.loads(warehouse, product_id, order.products[product_id])
+            self.flies(order.position)
