@@ -42,7 +42,7 @@ with open(sys.argv[1]) as f:
         x, y = read_n_int(f, 2)
         n_items = read_n_int(f, 1)[0]
         products = read_n_int(f, n_items)
-        orders.append((x, y, np.bincount(products)))
+        orders.append((x, y, np.bincount(products, minlength=n_product_types)))
 
     pos_ord = np.asarray([[n[0], n[1]] for n in orders])
     cnt_ord = np.asarray([n[2] for n in orders])
@@ -50,28 +50,18 @@ with open(sys.argv[1]) as f:
 
 pos_drn = np.repeat([pos_whs[0]], n_drones, axis=0)
 cnt_drn = np.zeros((n_drones, n_product_types))
+drn_cmd = []
+drones = np.zeros(n_drones)
 
 
 def dist(c1, c2):
-    return np.sqrt((c1[0] - c2[0]) ** 2 + (c1[1] - c2[1]) ** 2)
+    return int(np.ceil(np.sqrt((c1[0] - c2[0]) ** 2 + (c1[1] - c2[1]) ** 2)))
 
 
 def get_products_from_warehouse(o_id, w_id, type, n_prod):
     cost = dist(pos_ord[o_id], pos_whs[w_id]) * 2
     trips = max_payload / (product_weights[type] * n_prod)
     return trips * cost
-
-
-
-
-def get_cost_order(o_id):
-    prods = cnt_ord[o_id]
-    cost = 0
-    c_whs, whs = get_dist_warehouses(o_id)
-    for p_id, p_cnt in zip(range(n_prod), prods):
-        for i_whs in whs:
-            get_products_from_warehouse(o_id, w_id, p_id, p_cnt)
-    return cost
 
 
 def get_best_order():
@@ -87,7 +77,7 @@ def get_closest_wh_with(o_id, p_id):
     costs = []
     ids = []
     for w_id in range(n_warehouses):
-        if cnt_whs[p_id] > 1:
+        if cnt_whs[w_id][p_id] > 0:
             ids.append(w_id)
             costs.append(dist(pos_ord[o_id], pos_whs[w_id]))
     argmin = np.argmin(costs)
@@ -97,55 +87,110 @@ def get_closest_wh_with(o_id, p_id):
 def get_closest_drn(o_id):
     dists = []
     for d_id in range(n_drones):
-        dists.append(dist(pos_ord[o_id], pos_drn[d_id]))
+        if drones[d_id] > 0:
+            dists.append(np.inf)
+        else:
+            dists.append(dist(pos_ord[o_id], pos_drn[d_id]))
     return np.argmin(dists)
 
 
-def generate_atomic_insts():
+def get_av_weight(d_id):
+    w = 0
+    for i in range(n_product_types):
+        w += product_weights[i] * cnt_drn[d_id, i]
+    return max_payload - w
 
-    insts = []
 
-    # Generate atomic instructions
+insts = []
 
-    for o_id in range(n_orders):
-        for p_id in range(n_product_types):
-            if cnt_ord[p_id] == 0:
-                continue
-            w_id, cst = get_closest_wh_with(o_id, p_id)
-            insts.append((o_id, w_id, p_id, cnt_ord[p_id] * cst))
+for o_id in range(n_orders):
+    for p_id in range(n_product_types):
+        if cnt_ord[o_id][p_id] == 0:
+            continue
+        w_id, cst = get_closest_wh_with(o_id, p_id)
+        for i in range(cnt_ord[o_id][p_id]):
+            insts.append((o_id, w_id, p_id, cnt_ord[o_id][p_id] * cst))
 
-    # Estimate cost per order
+# Estimate cost per order
 
-    order = np.zeros((n_orders,))
+order = np.zeros((n_orders,))
+for inst in insts:
+    order[inst[0]] += inst[3]
+
+# Reorder instructions according to estimated cost
+new_insts = []
+for i in np.argsort(order):
     for inst in insts:
-        order[inst[0]] += inst[3]
+        if inst[0] == i:
+            new_insts.append(inst)
 
-    # Reorder instructions according to estimated cost
-    new_insts = []
-    for i in np.argsort(order):
-        for inst in insts:
-            if inst[0] == i:
-                new_insts.append(inst)
+insts = new_insts
 
-    insts = new_insts
+# Now, in two times:
+# - on inst find the closest drone to be fulfilled
+# - the drone takes other insts to fulfill
 
-    # Now, in two times:
-    # - on inst find the closest drone to be fulfilled
-    # - the drone takes other insts to fulfill
+timer = 0
 
-    timer = 0
-    drones = np.zeros(n_drones)
+while(timer != n_turns):
+    drones = drones - 1
+    drones[drones == -1] = 0
+    timer += 1
 
-    while(True):
-        inst, insts = insts[0], insts[1:]
-        o_id, w_id, p_id, _ = inst
-        d_id = get_closest_drn(o_id)
+    if len(insts) == 0:
+        break
+    if np.all(drones != 0):
+        continue
 
-        cnt_whs[w_id][p_id] = cnt_whs[w_id][p_id] - 1 
+    inst = insts[0]
+    insts =  insts[1:]
+    o_id, w_id, p_id, _ = inst
+    d_id = get_closest_drn(o_id)
 
-        d_insts = [inst]
-        # Now look for other actions doable
-        for inst in insts:
-            if inst[0] == o_id and inst[1] == w_id:
+    # Check if doable otherwise find nearest warehouse with stuff
+    if cnt_whs[w_id][p_id] == 0:
+        # No more product, find closer warehouse with stuff
+        w_id, _ = get_closest_wh_with(o_id, p_id)
 
-            
+    cmd_end = []
+    cnt_whs[w_id][p_id] = cnt_whs[w_id][p_id] - 1
+    cnt_drn[d_id][p_id] = cnt_drn[d_id][p_id] + 1
+    drn_cmd.append((d_id, 'L', w_id, p_id, 1))
+    cmd_end.append((d_id, 'D', o_id, p_id, 1))
+    drones[d_id] += (dist(pos_drn[d_id], pos_whs[w_id]) +
+                     dist(pos_whs[w_id], pos_ord[o_id]) + 2)
+    pos_drn[d_id][0] = pos_ord[o_id][0]
+    pos_drn[d_id][1] = pos_ord[o_id][1]
+
+    # Now look for other actions doable
+    n_insts = []
+    for inst in insts:
+        if inst[0] == o_id and inst[1] == w_id:
+            p_id_ = inst[2]
+            # Check if there is enough weight
+            av_weight = get_av_weight(d_id)
+            if av_weight >= product_weights[p_id_]:
+                cnt_whs[w_id][p_id_] = cnt_whs[w_id][p_id_] - 1
+                cnt_drn[d_id][p_id_] = cnt_drn[d_id][p_id_] + 1
+                # Add the command
+                if p_id == p_id_:
+                    # Product is the same, modify previous one
+                    drn_cmd[-1][4] = drn_cmd[-1][4] + 1
+                    cmd_end[-1][4] = cmd_end[-1][4] + 1
+                    # It's free, no update of cost
+                else:
+                    # New command
+                    drn_cmd.append((d_id, 'L', w_id, p_id_, 1))
+                    cmd_end.append((d_id, 'D', o_id, p_id_, 1))
+                    p_id = p_id_
+                    drones[d_id] += 2
+            else:
+                n_insts.append(inst)
+        else:
+            n_insts.append(inst)
+    insts = n_insts
+    drn_cmd.extend(cmd_end)
+
+print(len(drn_cmd))
+for i in drn_cmd:
+    print(' '.join([str(j) for j in i]))
