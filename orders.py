@@ -76,7 +76,6 @@ class Drone:
     def evaluate(self, warehouses):
         return sum(map(warehouses, lambda t: distance(t.position, self.position)))
 
-
     def flies(self, position):
         self.game.instruction.append('')
         self.wait += int(ceil(distance(position, self.position)))
@@ -85,11 +84,16 @@ class Drone:
     def loads(self, product_id, n_product):
         if self.weight + n_product < MAX_WEIGHT:
             self.products[product_id] += n_product
-        self.wait += 1
+            self.wait += 1
+            return 1
+        else:
+            return 0
 
     def affect(self, order):
         for warehouse in order.warehouses_:
             self.flies(warehouse)
             for product_id in np.where(order.products)[0]:
-                self.loads(warehouse, product_id, order.products[product_id])
+                done = self.loads(warehouse, product_id, order.products[product_id])
+                if not done:
+                    break
             self.flies(order.position)
