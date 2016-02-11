@@ -6,3 +6,9 @@ def distance(x, y):
 def time_turns(d):
     return ceil(d)
 
+
+def order_weight(products_in_order, product_weights):
+    cost = 0
+    for product, weight in zip(products_in_order, product_weights):
+        cost += product*weight
+    return cost
