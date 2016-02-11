@@ -8,7 +8,6 @@ class Game:
         self.drones = drones
         self.cost_matrix = np.array(len(orders), len(drones))
 
-
     def fill_matrix(self):
         for i, order in enumerate(self.orders):
             warehouses, cost = order.evaluate()
@@ -21,11 +20,12 @@ class Game:
         distances = map(elems, lambda t: distance(ref.position, t.position))
         return sorted(elems, key=distances), sorted(distances)
 
-
     def turn(self):
-        for drones in self.drones:
-            if drones.is_:
-
+        for j, drone in enumerate(self.drones):
+            if drone.is_available():
+                drone.affect(self.orders[np.argmin(self.cost_matrix[:, j])])
+            else:
+                drone.update()
 
 
 class Order:
@@ -69,3 +69,9 @@ class Drone:
 
     def evaluate(self, warehouses):
         return sum(map(warehouses, lambda t: distance(t.position, self.position)))
+
+    def affect(self, order):
+        self.order_ = order
+
+
+    def _update(self, order):
