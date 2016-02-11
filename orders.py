@@ -33,11 +33,11 @@ class Game:
                 drone.wait -= 1
 
 class Order:
-    def __init__(self, position,
-                 products, game):
+    def __init__(self, order_id, position,
+                 products):
+        self.id = order_id
         self.position = position
         self.products = products
-        self.game = game
 
     def deliver(self, product_id, n_products):
         self.products[product_id] -= n_products
@@ -59,7 +59,8 @@ class Order:
 
 
 class Warehouse:
-    def __init__(self, position, products, game):
+    def __init__(self, warehouse_id, position, products):
+        self.id = warehouse_id
         self.position = position
         self.products = products
 
@@ -72,10 +73,10 @@ class Warehouse:
 
 
 class Drone:
-    def __init__(self, position, products, game):
+    def __init__(self, drone_id, position, products):
+        self.id = drone_id
         self.position = position
         self.products = products
-        self.game = game
         self.wait = 0
         self.weight = 0
 
@@ -87,7 +88,7 @@ class Drone:
             self.products[product_id] -= n_products
             self.weight -= n_products * self.game.weights[product_id]
             self.wait += 1
-            self.game.instruction.append('')
+            INSTRUCTIONS.append([self.id, 'D', order.id, product_id, n_products])
             return 1
 
     def evaluate(self, warehouses):
@@ -96,7 +97,6 @@ class Drone:
     def flies(self, position):
         self.wait += int(ceil(distance(position, self.position)))
         self.position = position
-        self.game.instruction.append('')
 
     def loads(self, warehouse, product_id, n_product):
         if warehouse.products[product_id] == 0:
@@ -104,12 +104,14 @@ class Drone:
         self.wait += 1
         n_products = warehouse.loads(product_id, n_product)
 
-        self.weight += n_products * self.game.weights[product_id]
+        self.weight += n_products * WEIGHTS[product_id]
 
-        if self.weight > self.game.max_weight:
-            n_products -= (self.game.max_weight - self.weights) // self.game.weights[product_id] + 1
+        if self.weight > MAX_WEIGHTS:
+            old_n_products = n_products
+            n_products -= (MAX_WEIGHTS - self.weight) // WEIGHTS[product_id] + 1
+            self.weight += (old_n_products - n_products) * WEIGHTS[product_id]
             self.products += n_products
-            self.game.instruction.append('')
+            INSTRUCTIONS.append([self.id, 'L', warehouse.id, product_id, n_products)
             return 0
         else:
             return 1
@@ -128,3 +130,9 @@ class Drone:
 
 
 def main():
+    global INSTRUCTION = []
+    global MAX_WEIGHTS =
+    global WEIGHTS =
+    orders = []
+    for i in range(n_orders):
+        orders.append(Order())
