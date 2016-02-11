@@ -29,7 +29,7 @@ with open(sys.argv[1]) as f:
     for i in range(n_warehouses):
         x, y = read_n_int(f, 2)
         products = read_n_int(f, n_product_types)
-        warehouses.append((x, y, products))
+        warehouses.append(((x, y), products))
     n_orders = read_n_int(f, 1)[0]
 
     # List of (x, y, products)
@@ -38,6 +38,4 @@ with open(sys.argv[1]) as f:
         x, y = read_n_int(f, 2)
         n_items = read_n_int(f, 1)[0]
         products = read_n_int(f, n_items)
-        orders.append((x, y, np.bincount(products)))
-
-
+        orders.append(((x, y), np.bincount(products)))
