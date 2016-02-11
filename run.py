@@ -39,3 +39,5 @@ with open(sys.argv[1]) as f:
         n_items = read_n_int(f, 1)[0]
         products = read_n_int(f, n_items)
         orders.append(((x, y), np.bincount(products)))
+
+
