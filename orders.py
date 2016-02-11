@@ -23,7 +23,8 @@ class Game:
     def turn(self):
         for j, drone in enumerate(self.drones):
             if drone.is_available():
-                drone.affect(self.orders[np.argmin(self.cost_matrix[:, j])])
+                drone.affect(self.orders[np.argmin(self.cost_matrix[:, j])],
+                             warehouses)
             else:
                 drone.update()
 
@@ -59,19 +60,37 @@ class Warehouse:
         self.position = position
         self.products = products
 
+    def load(self, warehouse, product_id):
+        self.products[product] -= n_product
+
 class Drone:
     def __init__(self, position, products, game):
         self.position = position
         self.products = products
+        self.state_ = 'wait'
 
     def deliver(self, product_id, n_product):
+        self.state_ = 'deliver'
         self.products[product_id] -= n_product
 
     def evaluate(self, warehouses):
         return sum(map(warehouses, lambda t: distance(t.position, self.position)))
 
-    def affect(self, order):
+    def affect(self, order, warehouses):
+        self.available_ = True
         self.order_ = order
+        self.warehouses_ = warehouses
 
 
-    def _update(self, order):
+
+    def update(self):
+        if np.all(self.products - self.order_ >= 0) or self.total_weights > TOTAL_WEIGHTS:
+            self.flies(self.order_.position)
+            self.deliver(self.order)
+        else:
+            self.fli
+
+    def flies(self, warehouse):
+        self.pos
+
+    def load(self, warehouse):
