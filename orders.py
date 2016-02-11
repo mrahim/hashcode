@@ -3,6 +3,9 @@ from math import ceil
 from utils import distance
 import numpy as np
 
+MAX_WEIGHT = 100
+
+
 class Game:
     def __init__(self, orders, warehouses, drones):
         self.orders = orders
@@ -24,9 +27,10 @@ class Game:
 
     def turn(self):
         for j, drone in enumerate(self.drones):
-            if self.drone_availability[j] >= 0:
+            if drone.wait == 0:
                 drone.affect(self.orders[np.argmin(self.cost_matrix[:, j])])
-
+            else:
+                drone.wait -= 1
 
 class Order:
     def __init__(self, position,
@@ -35,12 +39,12 @@ class Order:
         self.products = products
         self.game = game
 
-    def deliver(self, product_id, n_product):
-        self.products[product_id] -= n_product
-        if np.all(self.products <= 0):
-            return True
-        else:
-            return False
+    def deliver(self, product_id, n_products):
+        self.products[product_id] -= n_products
+        if self.products[product_id] < 0:
+            self.products[product_id] = 0
+            n_products += self.products[product_id]
+        return n_products
 
     def evaluate(self):
         self.warehouses_ = []
@@ -59,41 +63,68 @@ class Warehouse:
         self.position = position
         self.products = products
 
-    def load(self, warehouse, product_id):
-        self.products[product] -= n_product
+    def loads(self, product_id, n_products):
+        self.products[product_id] -= n_products
+        if self.products[product_id] < 0:
+            n_products += self.products[product_id]
+            self.products[product_id] = 0
+        return n_products
+
 
 class Drone:
-    def __init__(self, drone_id, position, products, game):
+    def __init__(self, position, products, game):
         self.position = position
         self.products = products
+        self.game = game
         self.wait = 0
+        self.weight = 0
 
-    def delivers(self, product_id, n_product):
-        self.game.instruction.append
-        self.products[product_id] -= n_product
-        self.wait += 1
+    def delivers(self, order, product_id):
+        if order.products[product_id] == 0:
+            return 1
+        else:
+            n_products = order.deliver(product_id, self.products[product_id])
+            self.products[product_id] -= n_products
+            self.weight -= n_products * self.game.weights[product_id]
+            self.wait += 1
+            self.game.instruction.append('')
+            return 1
 
     def evaluate(self, warehouses):
         return sum(map(warehouses, lambda t: distance(t.position, self.position)))
 
     def flies(self, position):
-        self.game.instruction.append('')
         self.wait += int(ceil(distance(position, self.position)))
         self.position = position
+        self.game.instruction.append('')
 
-    def loads(self, product_id, n_product):
-        if self.weight + n_product < MAX_WEIGHT:
-            self.products[product_id] += n_product
-            self.wait += 1
+    def loads(self, warehouse, product_id, n_product):
+        if warehouse.products[product_id] == 0:
             return 1
-        else:
+        self.wait += 1
+        n_products = warehouse.loads(product_id, n_product)
+
+        self.weight += n_products * self.game.weights[product_id]
+
+        if self.weight > self.game.max_weight:
+            n_products -= (self.game.max_weight - self.weights) // self.game.weights[product_id] + 1
+            self.products += n_products
+            self.game.instruction.append('')
             return 0
+        else:
+            return 1
 
     def affect(self, order):
         for warehouse in order.warehouses_:
             self.flies(warehouse)
             for product_id in np.where(order.products)[0]:
-                done = self.loads(warehouse, product_id, order.products[product_id])
-                if not done:
+                has_space = self.loads(warehouse, product_id,
+                                  order.products[product_id])
+                if not has_space:
                     break
             self.flies(order.position)
+            for product_id in np.where(order.products)[0]:
+                self.delivers(order, product_id)
+
+
+def main():
