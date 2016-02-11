@@ -25,12 +25,16 @@ with open(sys.argv[1]) as f:
     n_product_types = read_n_int(f, 1)
     product_weights = read_n_int(f, n_product_types)
     n_warehouses = read_n_int(f, 1)
+
+    # List of (x, y, products)
     warehouses = []
     for i in range(n_warehouses):
         x, y = read_n_int(f, 2)
         products = read_n_int(f, n_product_types)
         warehouses.append((x, y, products))
     n_orders = read_n_int(f, 1)
+
+    # List of (x, y, products)
     orders = []
     for i in range(n_orders):
         x, y = read_n_int(f, 2)
