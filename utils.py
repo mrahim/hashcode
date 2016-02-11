@@ -6,6 +6,6 @@ def distance(x, y):
     
 def order_weight(products_in_order, product_weights):
     cost = 0    
-    for product, weight in zip(order, product_weights):
+    for product, weight in zip(products_in_order, product_weights):
         cost += product*weight
     return cost
