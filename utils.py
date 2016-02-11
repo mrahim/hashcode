@@ -7,8 +7,10 @@ def time_turns(d):
     return ceil(d)
 
 
-def order_weight(products_in_order, product_weights):
+def order_weight(orders, product_weights):
     cost = 0
-    for product, weight in zip(products_in_order, product_weights):
-        cost += product*weight
+    for order in orders:
+        products_type = order[1]
+        for p in products_type:
+            cost += product_weights[p]
     return cost
